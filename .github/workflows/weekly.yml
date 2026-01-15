@@ -2,6 +2,8 @@ name: Test automation
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 3"
 
 jobs:
   run-script:
