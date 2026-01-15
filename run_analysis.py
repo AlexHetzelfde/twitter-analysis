@@ -310,6 +310,18 @@ if "aantal_hashtags" in combined.columns:
                 print(f"   #{tag} ({cnt}×)")
 
 # ==============================
+# 🧹 DATA OPSCHONEN VOOR AI
+# ==============================
+
+# Zorg dat hashtag-aantallen altijd geldig zijn
+if "aantal_hashtags" in combined.columns:
+    combined["aantal_hashtags"] = combined["aantal_hashtags"].fillna(0)
+
+# Zorg dat IDs altijd strings zijn (voorkomt duplicaten)
+if "id" in combined.columns:
+    combined["id"] = combined["id"].astype(str)
+
+# ==============================
 # 🤖 CEL 8 — AI VOORSPELLINGEN
 # ==============================
 
