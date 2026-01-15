@@ -225,6 +225,76 @@ else:
     print("✅ Feature engineering voor AI voltooid")
 
 # ==============================
+# 🧠 CONTENT & FORMAT ADVIES (HYBRIDE)
+# ==============================
+
+print("\n" + "=" * 60)
+print("📝 CONTENT & FORMAT ADVIES")
+print("=" * 60)
+
+n_tweets = len(combined)
+
+# ------------------------------
+# MEDIA ADVIES
+# ------------------------------
+if "heeft_media" in combined.columns:
+    media_pct = combined["heeft_media"].mean()
+
+    print("\n🖼️ MEDIA")
+    print("-" * 60)
+    print(f"📊 {media_pct:.0%} van je tweets bevat media")
+
+    if n_tweets < 5:
+        print("⚠️ Weinig data — advies is indicatief")
+    else:
+        tweets_met_media = combined[combined["heeft_media"] == 1]
+        tweets_zonder_media = combined[combined["heeft_media"] == 0]
+
+        if not tweets_met_media.empty and not tweets_zonder_media.empty:
+            eng_media = tweets_met_media["total_engagement"].mean()
+            eng_no_media = tweets_zonder_media["total_engagement"].mean()
+
+            if eng_media > eng_no_media:
+                print("✅ Tweets met media presteren beter dan zonder media")
+            else:
+                print("✅ Tweets zonder media presteren beter dan met media")
+
+    if media_pct < 0.5:
+        print("💡 Overweeg vaker media (foto/video) te gebruiken")
+    else:
+        print("💡 Je mediagebruik zit goed")
+
+# ------------------------------
+# HASHTAG ADVIES
+# ------------------------------
+if "aantal_hashtags" in combined.columns:
+    avg_hash = combined["aantal_hashtags"].mean()
+
+    print("\n🏷️ HASHTAGS")
+    print("-" * 60)
+    print(f"📊 Gemiddeld {avg_hash:.1f} hashtags per tweet")
+
+    if avg_hash < 1:
+        print("💡 Je gebruikt weinig hashtags — probeer er 1–2 toe te voegen")
+    elif avg_hash > 5:
+        print("💡 Je gebruikt veel hashtags — minder kan soms beter werken")
+    else:
+        print("✅ Je hashtag‑gebruik zit in een gezonde range")
+
+    # Top hashtags (inhoudelijk)
+    if "text" in combined.columns:
+        from collections import Counter
+        all_tags = []
+        for t in combined["text"]:
+            all_tags.extend(extract_hashtags(t))
+
+        if all_tags:
+            top_tags = Counter(all_tags).most_common(5)
+            print("\n🔥 Meest gebruikte hashtags:")
+            for tag, cnt in top_tags:
+                print(f"   #{tag} ({cnt}×)")
+
+# ==============================
 # 🤖 CEL 8 — AI VOORSPELLINGEN
 # ==============================
 
