@@ -5,6 +5,8 @@
 import pandas as pd
 import os
 from datetime import datetime
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # ⚙️ CONFIGURATIE
 USERNAME = "Oliviaafairy"
