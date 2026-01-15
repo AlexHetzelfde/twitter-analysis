@@ -216,12 +216,24 @@ else:
 
     # Boolean features naar int (handig voor ML)
     if "heeft_media" in combined.columns:
-        combined["heeft_media"] = combined["heeft_media"].astype(int)
+    combined["heeft_media"] = (
+        combined["heeft_media"]
+        .fillna(False)
+        .astype(int)
+    )
+else:
+    combined["heeft_media"] = 0
     else:
         combined["heeft_media"] = 0
 
     if "heeft_link" in combined.columns:
-        combined["heeft_link"] = combined["heeft_link"].astype(int)
+    combined["heeft_link"] = (
+        combined["heeft_link"]
+        .fillna(False)
+        .astype(int)
+    )
+else:
+    combined["heeft_link"] = 0
     else:
         combined["heeft_link"] = 0
 
