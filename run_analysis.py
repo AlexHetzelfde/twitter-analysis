@@ -373,3 +373,22 @@ else:
 
     print(f"✅ Data opgeslagen: {path}")
     print(f"📊 {len(combined)} tweets opgeslagen")
+
+# ==============================
+# 💾 DATA COMMITTEN NAAR GITHUB
+# ==============================
+
+import subprocess
+
+try:
+    subprocess.run(["git", "config", "--global", "user.name", "github-actions"], check=True)
+    subprocess.run(["git", "config", "--global", "user.email", "actions@github.com"], check=True)
+
+    subprocess.run(["git", "add", "data/*.xlsx"], check=True)
+    subprocess.run(["git", "commit", "-m", f"Update data {run_date}"], check=True)
+    subprocess.run(["git", "push"], check=True)
+
+    print("✅ Data succesvol opgeslagen in GitHub repository")
+
+except Exception as e:
+    print(f"⚠️ Kon data niet committen: {e}")
