@@ -1,3 +1,4 @@
 pandas
 tweepy
 scikit-learn
+openpyxl
