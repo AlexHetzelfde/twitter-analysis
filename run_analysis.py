@@ -158,8 +158,11 @@ if "id" in combined.columns:
         print(f"🔍 {removed} duplicaten verwijderd")
 
 # Tijdzone fix
-if "tijd" in combined.columns:
-    combined["tijd"] = pd.to_datetime(combined["tijd"]).dt.tz_localize(None)
+combined["tijd"] = pd.to_datetime(
+    combined["tijd"],
+    utc=True,
+    errors="coerce"
+).dt.tz_convert(None)
 
 # Sorteren
 combined = combined.sort_values("tijd", ascending=False).reset_index(drop=True)
