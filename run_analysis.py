@@ -214,8 +214,8 @@ else:
     )
     combined["tekst_lengte"] = combined["text"].astype(str).str.len()
 
-    # Boolean features naar int (handig voor ML)
-    if "heeft_media" in combined.columns:
+# Boolean features naar int (handig voor ML)
+if "heeft_media" in combined.columns:
     combined["heeft_media"] = (
         combined["heeft_media"]
         .fillna(False)
@@ -223,10 +223,9 @@ else:
     )
 else:
     combined["heeft_media"] = 0
-    else:
-        combined["heeft_media"] = 0
 
-    if "heeft_link" in combined.columns:
+
+if "heeft_link" in combined.columns:
     combined["heeft_link"] = (
         combined["heeft_link"]
         .fillna(False)
@@ -234,8 +233,6 @@ else:
     )
 else:
     combined["heeft_link"] = 0
-    else:
-        combined["heeft_link"] = 0
 
     print("✅ Feature engineering voor AI voltooid")
 
