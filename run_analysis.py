@@ -16,6 +16,26 @@ print(f"✅ Script gestart voor @{USERNAME}")
 print(f"📅 Run datum: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
 # ==============================
+# 🔑 TWITTER API SETUP
+# ==============================
+
+import tweepy
+
+print("\n🔑 Twitter API verbinden...")
+
+client = tweepy.Client(
+    bearer_token=os.environ["X_BEARER_TOKEN"],
+    consumer_key=os.environ["X_API_KEY"],
+    consumer_secret=os.environ["X_API_SECRET"],
+    access_token=os.environ["X_ACCESS_TOKEN"],
+    access_token_secret=os.environ["X_ACCESS_SECRET"],
+    wait_on_rate_limit=True
+)
+
+me = client.get_me()
+print(f"✅ Verbonden als @{me.data.username}")
+
+# ==============================
 # 📂 OUDE DATA AUTOMATISCH LADEN
 # ==============================
 
