@@ -131,3 +131,37 @@ def fetch_my_tweets(username, max_tweets=10):
 
 mijn_tweets = fetch_my_tweets(USERNAME, max_tweets=30)
 print(f"🔎 Debug: mijn_tweets bevat {len(mijn_tweets)} tweets")
+
+# ==============================
+# 🔄 CEL 5 — DATA COMBINEREN
+# ==============================
+
+print("\n🔄 DATA COMBINEREN")
+print("=" * 60)
+
+# Combineer oude + nieuwe data
+if oude_data.empty:
+    combined = mijn_tweets.copy()
+    print(f"📊 Alleen nieuwe tweets: {len(combined)}")
+else:
+    combined = pd.concat([oude_data, mijn_tweets], ignore_index=True)
+    print(f"📊 Oude: {len(oude_data)} + Nieuw: {len(mijn_tweets)}")
+
+# Duplicaten verwijderen op tweet-id
+if "id" in combined.columns:
+    before = len(combined)
+    combined = combined.drop_duplicates(subset="id", keep="first")
+    removed = before - len(combined)
+    if removed > 0:
+        print(f"🔍 {removed} duplicaten verwijderd")
+
+# Tijdzone fix
+if "tijd" in combined.columns:
+    combined["tijd"] = pd.to_datetime(combined["tijd"]).dt.tz_localize(None)
+
+# Sorteren
+combined = combined.sort_values("tijd", ascending=False).reset_index(drop=True)
+
+print(f"\n✅ Totaal tweets: {len(combined)}")
+if not combined.empty:
+    print(f"📅 Van {combined['tijd'].min()} tot {combined['tijd'].max()}")
