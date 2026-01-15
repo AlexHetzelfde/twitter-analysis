@@ -125,4 +125,9 @@ def fetch_my_tweets(username, max_tweets=10):
     print(f"📅 Van {df['tijd'].min()} tot {df['tijd'].max()}")
 
     return df
-    mijn_tweets = fetch_my_tweets(USERNAME, max_tweets=30)
+# ==============================
+# ▶️ CEL 4 AANROEPEN
+# ==============================
+
+mijn_tweets = fetch_my_tweets(USERNAME, max_tweets=30)
+print(f"🔎 Debug: mijn_tweets bevat {len(mijn_tweets)} tweets")
