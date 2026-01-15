@@ -105,18 +105,37 @@ def fetch_my_tweets(username, max_tweets=10):
             media_dict[media.media_key] = media.type
 
     rows = []
-    for t in response.data:
-        metrics = t.public_metrics or {}
+for t in response.data:
+    metrics = t.public_metrics or {}
 
-        rows.append({
-            "id": str(t.id),
-            "tijd": pd.to_datetime(t.created_at),
-            "text": t.text,
-            "likes": metrics.get("like_count", 0),
-            "retweets": metrics.get("retweet_count", 0),
-            "replies": metrics.get("reply_count", 0),
-            "quotes": metrics.get("quote_count", 0),
-        })
+    # ✅ MEDIA DETECTIE
+    heeft_media = False
+    media_type = None
+
+    # 1️⃣ Officiële detectie via attachments
+    if hasattr(t, "attachments") and t.attachments:
+        media_keys = t.attachments.get("media_keys", [])
+        if media_keys:
+            heeft_media = True
+            media_type = media_dict.get(media_keys[0], "unknown")
+
+    # 2️⃣ Fallback via tekst (zekerheid)
+    if not heeft_media:
+        heeft_media = bool(
+            re.search(r"pic\.twitter|video|https://t\.co", t.text, re.IGNORECASE)
+        )
+
+    rows.append({
+        "id": str(t.id),
+        "tijd": pd.to_datetime(t.created_at),
+        "text": t.text,
+        "heeft_media": heeft_media,
+        "media_type": media_type,
+        "likes": metrics.get("like_count", 0),
+        "retweets": metrics.get("retweet_count", 0),
+        "replies": metrics.get("reply_count", 0),
+        "quotes": metrics.get("quote_count", 0),
+    })
 
     df = pd.DataFrame(rows)
     df["total_engagement"] = (
