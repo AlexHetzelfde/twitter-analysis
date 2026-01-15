@@ -165,3 +165,32 @@ combined = combined.sort_values("tijd", ascending=False).reset_index(drop=True)
 print(f"\n✅ Totaal tweets: {len(combined)}")
 if not combined.empty:
     print(f"📅 Van {combined['tijd'].min()} tot {combined['tijd'].max()}")
+
+# ==============================
+# 🛠️ CEL 6 — HELPER FUNCTIES
+# ==============================
+
+def extract_hashtags(text):
+    """Haalt hashtags uit tekst"""
+    return re.findall(r"#(\w+)", str(text).lower())
+
+
+def categorize_content(text):
+    """Categoriseert content type op basis van tekst"""
+    text_lower = str(text).lower()
+
+    if any(word in text_lower for word in ["vraag", "?", "poll", "question"]):
+        return "vraag/poll"
+    elif any(word in text_lower for word in ["tip", "advies", "hoe", "guide", "how"]):
+        return "educatief"
+    elif any(word in text_lower for word in ["nieuw", "new", "launch", "dropping"]):
+        return "aankondiging"
+    elif any(word in text_lower for word in ["dank", "thanks", "appreciate"]):
+        return "interactie"
+    elif any(word in text_lower for word in ["link", "bio", "check", "subscribe"]):
+        return "promotie"
+    else:
+        return "algemeen"
+
+
+print("✅ Helper functies geladen")
