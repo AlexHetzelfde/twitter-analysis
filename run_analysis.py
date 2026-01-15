@@ -119,11 +119,6 @@ def fetch_my_tweets(username, max_tweets=10):
                 heeft_media = True
                 media_type = media_dict.get(media_keys[0], "unknown")
 
-        if not heeft_media:
-            heeft_media = bool(
-                re.search(r"pic\.twitter|video|https://t\.co", t.text, re.IGNORECASE)
-            )
-
         rows.append({
             "id": str(t.id),
             "tijd": pd.to_datetime(t.created_at),
@@ -225,62 +220,22 @@ print("✅ Helper functies geladen")
 # 🧩 CEL 7 — FEATURE ENGINEERING (SCHOON & ROBUUST)
 # ==============================
 
-if combined.empty:
-    print("⚠️ Geen data voor feature engineering")
-else:
-    # 1. Tijd features
-    combined["uur"] = combined["tijd"].dt.hour
-    combined["dag"] = combined["tijd"].dt.dayofweek
+combined["uur"] = combined["tijd"].dt.hour
+combined["dag"] = combined["tijd"].dt.dayofweek
 
-    # 2. Tekst features
-    combined["aantal_hashtags"] = combined["text"].apply(
-        lambda x: len(extract_hashtags(x))
-    )
-    combined["tekst_lengte"] = combined["text"].astype(str).str.len()
+combined["aantal_hashtags"] = combined["text"].apply(
+    lambda x: len(extract_hashtags(x))
+)
+combined["tekst_lengte"] = combined["text"].astype(str).str.len()
 
-    # 3. MEDIA FALLBACK (op basis van tekst)
-    if "heeft_media" in combined.columns:
-        combined["heeft_media"] = combined["heeft_media"].fillna(
-            combined["text"].str.contains(
-                "pic.twitter|video|https://t.co",
-                case=False,
-                na=False
-            )
-        )
-    else:
-        combined["heeft_media"] = combined["text"].str.contains(
-            "pic.twitter|video|https://t.co",
-            case=False,
-            na=False
-        )
+combined["heeft_media"] = combined["heeft_media"].fillna(False).astype(int)
+combined["heeft_link"] = combined["text"].str.contains(
+    r"https?://",
+    case=False,
+    na=False
+).astype(int)
 
-    # 4. Booleans → int (ML‑proof)
-    combined["heeft_media"] = combined["heeft_media"].fillna(False).astype(int)
-
-    if "heeft_link" in combined.columns:
-        combined["heeft_link"] = combined["heeft_link"].fillna(False).astype(int)
-    else:
-        combined["heeft_link"] = 0
-
-    print("✅ Feature engineering voor AI voltooid")
-    
-# ------------------------------
-# MEDIA FALLBACK DETECTIE
-# ------------------------------
-if "heeft_media" in combined.columns:
-    combined["heeft_media"] = combined["heeft_media"].fillna(
-        combined["text"].str.contains(
-            "pic.twitter|video|https://t.co",
-            case=False,
-            na=False
-        )
-    )
-else:
-    combined["heeft_media"] = combined["text"].str.contains(
-        "pic.twitter|video|https://t.co",
-        case=False,
-        na=False
-    )
+combined["heeft_media"] = combined["heeft_media"].fillna(False).astype(int)
 
 # ==============================
 # 🧠 CONTENT & FORMAT ADVIES (HYBRIDE)
