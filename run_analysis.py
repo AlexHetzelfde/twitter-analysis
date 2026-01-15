@@ -194,3 +194,180 @@ def categorize_content(text):
 
 
 print("✅ Helper functies geladen")
+
+# ==============================
+# 🧩 CEL 7 (MINI) — FEATURES VOOR AI
+# ==============================
+
+if combined.empty:
+    print("⚠️ Geen data voor feature engineering")
+else:
+    combined["uur"] = combined["tijd"].dt.hour
+    combined["dag"] = combined["tijd"].dt.dayofweek
+    combined["aantal_hashtags"] = combined["text"].apply(
+        lambda x: len(extract_hashtags(x))
+    )
+    combined["tekst_lengte"] = combined["text"].astype(str).str.len()
+
+    # Boolean features naar int (handig voor ML)
+    if "heeft_media" in combined.columns:
+        combined["heeft_media"] = combined["heeft_media"].astype(int)
+    else:
+        combined["heeft_media"] = 0
+
+    if "heeft_link" in combined.columns:
+        combined["heeft_link"] = combined["heeft_link"].astype(int)
+    else:
+        combined["heeft_link"] = 0
+
+    print("✅ Feature engineering voor AI voltooid")
+
+# ==============================
+# 🤖 CEL 8 — AI VOORSPELLINGEN
+# ==============================
+
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+
+def train_personal_ai_model(df):
+    print("=" * 60)
+    print("🤖 AI MODEL TRAINEN")
+    print("=" * 60)
+
+    # Check engagement data
+    use_engagement = False
+    if "likes" in df.columns:
+        tweets_met_eng = df[
+            (df["likes"] > 0) |
+            (df["retweets"] > 0) |
+            (df["replies"] > 0)
+        ]
+
+        if len(tweets_met_eng) >= 10:
+            df = tweets_met_eng
+            use_engagement = True
+
+    # ==============================
+    # FEATURE SET
+    # ==============================
+    X = df[[
+        "uur",
+        "dag",
+        "aantal_hashtags",
+        "tekst_lengte",
+        "heeft_media",
+        "heeft_link"
+    ]].copy()
+
+    # ==============================
+    # TARGET
+    # ==============================
+    if use_engagement:
+        y = df["total_engagement"]
+        print("📊 Methode: engagement-based AI")
+    else:
+        print("📊 Methode: frequency-based AI")
+
+        freq = df.groupby(["uur", "dag"]).size()
+        max_freq = freq.max()
+
+        def freq_score(row):
+            return freq.get((row["uur"], row["dag"]), 1) / max_freq
+
+        y = df.apply(freq_score, axis=1)
+
+    # ==============================
+    # MODEL TRAINEN
+    # ==============================
+    model = RandomForestRegressor(
+        n_estimators=100,
+        max_depth=10,
+        random_state=42
+    )
+    model.fit(X, y)
+
+    print("✅ Model getraind")
+
+    # ==============================
+    # VOORSPELLINGEN
+    # ==============================
+    predictions = []
+
+    avg = {
+        "aantal_hashtags": df["aantal_hashtags"].mean(),
+        "tekst_lengte": df["tekst_lengte"].mean(),
+        "heeft_media": df["heeft_media"].mean(),
+        "heeft_link": df["heeft_link"].mean()
+    }
+
+    for dag in range(7):
+        for uur in range(6, 24):
+            row = [
+                uur,
+                dag,
+                avg["aantal_hashtags"],
+                avg["tekst_lengte"],
+                avg["heeft_media"],
+                avg["heeft_link"]
+            ]
+            score = model.predict([row])[0]
+            predictions.append({
+                "dag": dag,
+                "uur": uur,
+                "score": score
+            })
+
+    pred_df = pd.DataFrame(predictions)
+
+    # ==============================
+    # TOP MOMENTEN
+    # ==============================
+    top = pred_df.nlargest(10, "score")
+
+    dagen_map = {
+        0: "Maandag",
+        1: "Dinsdag",
+        2: "Woensdag",
+        3: "Donderdag",
+        4: "Vrijdag",
+        5: "Zaterdag",
+        6: "Zondag"
+    }
+
+    print("\n🏆 TOP 10 AANBEVOLEN POSTMOMENTEN")
+    print("-" * 60)
+    for i, r in enumerate(top.itertuples(), 1):
+        print(
+            f"{i:2d}. {dagen_map[r.dag]:9s} om {r.uur:02d}:00 "
+            f"(score: {r.score*100:.0f}%)"
+        )
+
+    return model, pred_df
+
+# ==============================
+# ▶️ CEL 8 AANROEPEN
+# ==============================
+
+if combined.empty or len(combined) < 3:
+    print("⚠️ Te weinig data voor AI")
+    model = None
+    predictions = pd.DataFrame()
+else:
+    model, predictions = train_personal_ai_model(combined)
+
+# ==============================
+# 💾 CEL 10 — DATA OPSLAAN
+# ==============================
+
+if combined.empty:
+    print("⚠️ Geen data om op te slaan")
+else:
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    safe_username = USERNAME.lower().replace("@", "")
+    filename = f"{safe_username}_{run_date}.xlsx"
+
+    path = os.path.join("data", filename)
+    combined.to_excel(path, index=False)
+
+    print(f"✅ Data opgeslagen: {path}")
+    print(f"📊 {len(combined)} tweets opgeslagen")
