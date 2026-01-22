@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # ⚙️ CONFIGURATIE
-USERNAME = "Oliviaafairy"
+USERNAME = "YourSlutHaley"
 
 print("=" * 60)
 print("🧚 TWITTER AI ANALYSE")
