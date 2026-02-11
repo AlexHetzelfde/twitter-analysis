@@ -217,95 +217,116 @@ def categorize_content(text):
 print("✅ Helper functies geladen")
 
 # ==============================
-# 🧩 CEL 7 — FEATURE ENGINEERING (SCHOON & ROBUUST)
+# 🧩 CEL 7 — ADVANCED FEATURE ENGINEERING
 # ==============================
 
 combined["uur"] = combined["tijd"].dt.hour
 combined["dag"] = combined["tijd"].dt.dayofweek
 
-combined["aantal_hashtags"] = combined["text"].apply(
-    lambda x: len(extract_hashtags(x))
-)
+# Basis
 combined["tekst_lengte"] = combined["text"].astype(str).str.len()
+combined["woordenaantal"] = combined["text"].astype(str).apply(lambda x: len(x.split()))
+combined["aantal_hashtags"] = combined["text"].apply(lambda x: len(extract_hashtags(x)))
 
-combined["heeft_media"] = combined["heeft_media"].fillna(False).astype(int)
-combined["heeft_link"] = combined["text"].str.contains(
-    r"https?://",
-    case=False,
-    na=False
-).astype(int)
+# Hashtag density
+combined["hashtag_density"] = combined["aantal_hashtags"] / combined["woordenaantal"].replace(0, 1)
 
+# Vraagvorm
+combined["is_vraag"] = combined["text"].astype(str).str.contains(r"\?").astype(int)
+
+# Uitroeptekens
+combined["aantal_uitroep"] = combined["text"].astype(str).str.count("!")
+
+# Hoofdletters percentage
+def caps_ratio(text):
+    text = str(text)
+    if len(text) == 0:
+        return 0
+    caps = sum(1 for c in text if c.isupper())
+    return caps / len(text)
+
+combined["caps_ratio"] = combined["text"].apply(caps_ratio)
+
+# Emoji count (ruwe detectie)
+combined["emoji_count"] = combined["text"].astype(str).str.count(r"[^\w\s,]")
+
+# Link detectie
+combined["heeft_link"] = combined["text"].str.contains(r"https?://", case=False, na=False).astype(int)
+
+# Content categorie
+combined["content_type"] = combined["text"].apply(categorize_content)
+combined = pd.get_dummies(combined, columns=["content_type"], drop_first=True)
+
+# Media fix
 combined["heeft_media"] = combined["heeft_media"].fillna(False).astype(int)
+
+print("✅ Advanced features toegevoegd")
 
 # ==============================
-# 🧠 CONTENT & FORMAT ADVIES (HYBRIDE)
+# 🧠 DIEPGAANDE PERFORMANCE ANALYSE
 # ==============================
 
 print("\n" + "=" * 60)
-print("📝 CONTENT & FORMAT ADVIES")
+print("🧠 DIEPGAANDE CONTENT ANALYSE")
 print("=" * 60)
 
-n_tweets = len(combined)
+if len(combined) >= 10:
 
-# ------------------------------
-# MEDIA ADVIES
-# ------------------------------
-if "heeft_media" in combined.columns:
-    media_pct = combined["heeft_media"].mean()
+    # Percentielen
+    top_threshold = combined["total_engagement"].quantile(0.75)
+    bottom_threshold = combined["total_engagement"].quantile(0.25)
 
-    print("\n🖼️ MEDIA")
+    top = combined[combined["total_engagement"] >= top_threshold]
+    bottom = combined[combined["total_engagement"] <= bottom_threshold]
+
+    print("\n🔥 TOP 25% vs ❄️ BOTTOM 25%")
     print("-" * 60)
-    print(f"📊 {media_pct:.0%} van je tweets bevat media")
 
-    if n_tweets < 5:
-        print("⚠️ Weinig data — advies is indicatief")
-    else:
-        tweets_met_media = combined[combined["heeft_media"] == 1]
-        tweets_zonder_media = combined[combined["heeft_media"] == 0]
+    def compare_feature(feature):
+        if feature in combined.columns:
+            print(f"{feature}:")
+            print(f"   Top: {top[feature].mean():.2f}")
+            print(f"   Bottom: {bottom[feature].mean():.2f}")
 
-        if not tweets_met_media.empty and not tweets_zonder_media.empty:
-            eng_media = tweets_met_media["total_engagement"].mean()
-            eng_no_media = tweets_zonder_media["total_engagement"].mean()
+    for f in [
+        "aantal_hashtags",
+        "tekst_lengte",
+        "woordenaantal",
+        "heeft_media",
+        "heeft_link",
+        "is_vraag"
+    ]:
+        compare_feature(f)
 
-            if eng_media > eng_no_media:
-                print("✅ Tweets met media presteren beter dan zonder media")
-            else:
-                print("✅ Tweets zonder media presteren beter dan met media")
-
-    if media_pct < 0.5:
-        print("💡 Overweeg vaker media (foto/video) te gebruiken")
-    else:
-        print("💡 Je mediagebruik zit goed")
-
-# ------------------------------
-# HASHTAG ADVIES
-# ------------------------------
-if "aantal_hashtags" in combined.columns:
-    avg_hash = combined["aantal_hashtags"].mean()
-
-    print("\n🏷️ HASHTAGS")
+    # ==============================
+    # HASHTAG PERFORMANCE
+    # ==============================
+    print("\n🏷️ HASHTAG PERFORMANCE")
     print("-" * 60)
-    print(f"📊 Gemiddeld {avg_hash:.1f} hashtags per tweet")
 
-    if avg_hash < 1:
-        print("💡 Je gebruikt weinig hashtags — probeer er 1–2 toe te voegen")
-    elif avg_hash > 5:
-        print("💡 Je gebruikt veel hashtags — minder kan soms beter werken")
-    else:
-        print("✅ Je hashtag‑gebruik zit in een gezonde range")
+    baseline = combined["total_engagement"].mean()
 
-    # Top hashtags (inhoudelijk)
-    if "text" in combined.columns:
-        from collections import Counter
-        all_tags = []
-        for t in combined["text"]:
-            all_tags.extend(extract_hashtags(t))
+    hashtag_stats = {}
 
-        if all_tags:
-            top_tags = Counter(all_tags).most_common(5)
-            print("\n🔥 Meest gebruikte hashtags:")
-            for tag, cnt in top_tags:
-                print(f"   #{tag} ({cnt}×)")
+    for _, row in combined.iterrows():
+        tags = extract_hashtags(row["text"])
+        for tag in tags:
+            hashtag_stats.setdefault(tag, []).append(row["total_engagement"])
+
+    results = []
+    for tag, values in hashtag_stats.items():
+        if len(values) >= 3:
+            avg_eng = sum(values) / len(values)
+            uplift = ((avg_eng - baseline) / baseline) * 100
+            results.append((tag, len(values), avg_eng, uplift))
+
+    results.sort(key=lambda x: x[3], reverse=True)
+
+    for tag, count, avg_eng, uplift in results[:10]:
+        print(f"#{tag} ({count}x) → {uplift:+.1f}% uplift")
+
+else:
+    print("⚠️ Te weinig data voor diepgaande analyse")
 
 # ==============================
 # 🧹 DATA OPSCHONEN VOOR AI
@@ -324,122 +345,97 @@ if "id" in combined.columns:
 # ==============================
 
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
+import numpy as np
 
 def train_personal_ai_model(df):
     print("=" * 60)
-    print("🤖 AI MODEL TRAINEN")
+    print("🤖 ADVANCED AI MODEL TRAINEN")
     print("=" * 60)
 
-    # Check engagement data
-    use_engagement = False
-    if "likes" in df.columns:
-        tweets_met_eng = df[
-            (df["likes"] > 0) |
-            (df["retweets"] > 0) |
-            (df["replies"] > 0)
-        ]
+    df = df[df["total_engagement"] > 0]
 
-        if len(tweets_met_eng) >= 10:
-            df = tweets_met_eng
-            use_engagement = True
+if len(df) < 3:
+    print("⚠️ Te weinig engagement-data voor model")
+    return None
 
-    # ==============================
-    # FEATURE SET
-    # ==============================
-    X = df[[
+    # Log transform target
+    y = np.log1p(df["total_engagement"])
+
+    feature_cols = [
         "uur",
         "dag",
         "aantal_hashtags",
         "tekst_lengte",
+        "woordenaantal",
+        "hashtag_density",
+        "is_vraag",
+        "aantal_uitroep",
+        "caps_ratio",
+        "emoji_count",
         "heeft_media",
         "heeft_link"
-    ]].copy()
+    ]
 
-    # ==============================
-    # TARGET
-    # ==============================
-    if use_engagement:
-        y = df["total_engagement"]
-        print("📊 Methode: engagement-based AI")
-    else:
-        print("📊 Methode: frequency-based AI")
+    # Voeg dynamisch content dummy kolommen toe
+    content_cols = [c for c in df.columns if c.startswith("content_type_")]
+    feature_cols.extend(content_cols)
 
-        freq = df.groupby(["uur", "dag"]).size()
-        max_freq = freq.max()
+    X = df[feature_cols]
 
-        def freq_score(row):
-            return freq.get((row["uur"], row["dag"]), 1) / max_freq
-
-        y = df.apply(freq_score, axis=1)
-
-    # ==============================
-    # MODEL TRAINEN
-    # ==============================
     model = RandomForestRegressor(
-        n_estimators=100,
-        max_depth=10,
+        n_estimators=300,
+        max_depth=12,
         random_state=42
     )
-    model.fit(X, y)
 
+    model.fit(X, y)
     print("✅ Model getraind")
 
     # ==============================
-    # VOORSPELLINGEN
+    # FEATURE IMPORTANCE
     # ==============================
-    predictions = []
+    importances = model.feature_importances_
+    importance_df = pd.DataFrame({
+        "feature": feature_cols,
+        "importance": importances
+    }).sort_values("importance", ascending=False)
 
-    avg = {
-        "aantal_hashtags": df["aantal_hashtags"].mean(),
-        "tekst_lengte": df["tekst_lengte"].mean(),
-        "heeft_media": df["heeft_media"].mean(),
-        "heeft_link": df["heeft_link"].mean()
-    }
-
-    for dag in range(7):
-        for uur in range(6, 24):
-            row = [
-                uur,
-                dag,
-                avg["aantal_hashtags"],
-                avg["tekst_lengte"],
-                avg["heeft_media"],
-                avg["heeft_link"]
-            ]
-            score = model.predict([row])[0]
-            predictions.append({
-                "dag": dag,
-                "uur": uur,
-                "score": score
-            })
-
-    pred_df = pd.DataFrame(predictions)
-
-    # ==============================
-    # TOP MOMENTEN
-    # ==============================
-    top = pred_df.nlargest(10, "score")
-
-    dagen_map = {
-        0: "Maandag",
-        1: "Dinsdag",
-        2: "Woensdag",
-        3: "Donderdag",
-        4: "Vrijdag",
-        5: "Zaterdag",
-        6: "Zondag"
-    }
-
-    print("\n🏆 TOP 10 AANBEVOLEN POSTMOMENTEN")
+    print("\n📊 FEATURE IMPORTANCE")
     print("-" * 60)
-    for i, r in enumerate(top.itertuples(), 1):
-        print(
-            f"{i:2d}. {dagen_map[r.dag]:9s} om {r.uur:02d}:00 "
-            f"(score: {r.score*100:.0f}%)"
-        )
+    for _, row in importance_df.head(10).iterrows():
+        print(f"{row['feature']}: {row['importance']:.3f}")
 
-    return model, pred_df
+    # ==============================
+    # SCENARIO SIMULATIE
+    # ==============================
+    print("\n🧪 BESTE CONTENT COMBINATIE SIMULATIE")
+    print("-" * 60)
+
+    best_score = -999
+    best_combo = None
+
+    avg_vals = df[feature_cols].mean()
+
+    for hashtags in [0, 1, 2, 3]:
+        for media in [0, 1]:
+            for link in [0, 1]:
+                test_row = avg_vals.copy()
+                test_row["aantal_hashtags"] = hashtags
+                test_row["heeft_media"] = media
+                test_row["heeft_link"] = link
+
+                pred = np.expm1(model.predict(test_row.to_frame().T)[0]
+
+                if pred > best_score:
+                    best_score = pred
+                    best_combo = (hashtags, media, link)
+
+    print(f"Beste combinatie:")
+    print(f"Hashtags: {best_combo[0]}")
+    print(f"Media: {'Ja' if best_combo[1] else 'Nee'}")
+    print(f"Link: {'Ja' if best_combo[2] else 'Nee'}")
+
+    return model
 
 # ==============================
 # ▶️ CEL 8 AANROEPEN
@@ -450,7 +446,7 @@ if combined.empty or len(combined) < 3:
     model = None
     predictions = pd.DataFrame()
 else:
-    model, predictions = train_personal_ai_model(combined)
+    model = train_personal_ai_model(combined)
 
 # ==============================
 # 💾 CEL 10 — DATA OPSLAAN
