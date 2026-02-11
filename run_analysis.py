@@ -341,24 +341,26 @@ if "id" in combined.columns:
     combined["id"] = combined["id"].astype(str)
 
 # ==============================
-# 🤖 CEL 8 — AI VOORSPELLINGEN
+# 🤖 CEL 8 — VERBETERDE AI VOORSPELLINGEN
 # ==============================
 
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import r2_score, mean_absolute_error
 import numpy as np
 
 def train_personal_ai_model(df):
+
     print("=" * 60)
-    print("🤖 ADVANCED AI MODEL TRAINEN")
+    print("🤖 ADVANCED AI MODEL TRAINEN (MET VALIDATIE)")
     print("=" * 60)
 
-    df = df[df["total_engagement"] > 0]
+    df = df[df["total_engagement"] > 0].copy()
 
-if len(df) < 3:
-    print("⚠️ Te weinig engagement-data voor model")
-    return None
+    if len(df) < 8:
+        print("⚠️ Te weinig data voor betrouwbaar model")
+        return None, df
 
-    # Log transform target
     y = np.log1p(df["total_engagement"])
 
     feature_cols = [
@@ -376,77 +378,117 @@ if len(df) < 3:
         "heeft_link"
     ]
 
-    # Voeg dynamisch content dummy kolommen toe
     content_cols = [c for c in df.columns if c.startswith("content_type_")]
     feature_cols.extend(content_cols)
 
     X = df[feature_cols]
 
+    # ==========================
+    # Train / Test split
+    # ==========================
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.3, random_state=42
+    )
+
     model = RandomForestRegressor(
-        n_estimators=300,
-        max_depth=12,
+        n_estimators=400,
+        max_depth=14,
         random_state=42
     )
 
-    model.fit(X, y)
-    print("✅ Model getraind")
+    model.fit(X_train, y_train)
 
-    # ==============================
-    # FEATURE IMPORTANCE
-    # ==============================
+    # ==========================
+    # Evaluatie
+    # ==========================
+    y_pred_test = model.predict(X_test)
+
+    r2 = r2_score(y_test, y_pred_test)
+    mae = mean_absolute_error(np.expm1(y_test), np.expm1(y_pred_test))
+
+    print(f"📊 R² score: {r2:.3f}")
+    print(f"📉 MAE (gem. fout in engagement): {mae:.2f}")
+
+    # Cross validation
+    cv_scores = cross_val_score(model, X, y, cv=5)
+    print(f"🔁 Cross-val gemiddelde R²: {cv_scores.mean():.3f}")
+
+    # ==========================
+    # Voorspellingen voor ALLE tweets
+    # ==========================
+    df["ai_prediction"] = np.expm1(model.predict(X))
+    df["prediction_error"] = df["total_engagement"] - df["ai_prediction"]
+
+    print("\n📈 TOP UNDERPERFORMERS (gemiste kansen)")
+    under = df.sort_values("prediction_error").head(5)
+    for _, row in under.iterrows():
+        print(f"- {row['text'][:60]} | -{row['prediction_error']:.1f}")
+
+    print("\n🚀 TOP OVERPERFORMERS")
+    over = df.sort_values("prediction_error", ascending=False).head(5)
+    for _, row in over.iterrows():
+        print(f"- {row['text'][:60]} | +{row['prediction_error']:.1f}")
+
+    # ==========================
+    # Feature importance
+    # ==========================
     importances = model.feature_importances_
-    importance_df = pd.DataFrame({
-        "feature": feature_cols,
-        "importance": importances
-    }).sort_values("importance", ascending=False)
+    importance_df = (
+        pd.DataFrame({
+            "feature": feature_cols,
+            "importance": importances
+        })
+        .sort_values("importance", ascending=False)
+    )
 
     print("\n📊 FEATURE IMPORTANCE")
     print("-" * 60)
     for _, row in importance_df.head(10).iterrows():
         print(f"{row['feature']}: {row['importance']:.3f}")
 
-    # ==============================
-    # SCENARIO SIMULATIE
-    # ==============================
-    print("\n🧪 BESTE CONTENT COMBINATIE SIMULATIE")
+    # ==========================
+    # Grotere simulatie ruimte
+    # ==========================
+    print("\n🧪 STRATEGISCHE SIMULATIE")
     print("-" * 60)
 
-    best_score = -999
+    best_score = -1
     best_combo = None
 
-    avg_vals = df[feature_cols].mean()
+    avg_vals = X.mean()
 
-    for hashtags in [0, 1, 2, 3]:
-        for media in [0, 1]:
-            for link in [0, 1]:
+    for uur in range(0, 24, 3):
+        for hashtags in [0, 1, 2, 3]:
+            for media in [0, 1]:
                 test_row = avg_vals.copy()
+                test_row["uur"] = uur
                 test_row["aantal_hashtags"] = hashtags
                 test_row["heeft_media"] = media
-                test_row["heeft_link"] = link
 
-                pred = np.expm1(model.predict(test_row.to_frame().T)[0]
+                pred = np.expm1(model.predict(test_row.to_frame().T)[0])
 
                 if pred > best_score:
                     best_score = pred
-                    best_combo = (hashtags, media, link)
+                    best_combo = (uur, hashtags, media)
 
-    print(f"Beste combinatie:")
-    print(f"Hashtags: {best_combo[0]}")
-    print(f"Media: {'Ja' if best_combo[1] else 'Nee'}")
-    print(f"Link: {'Ja' if best_combo[2] else 'Nee'}")
+    print("Beste combinatie:")
+    print(f"Tijdstip: {best_combo[0]}:00")
+    print(f"Hashtags: {best_combo[1]}")
+    print(f"Media: {'Ja' if best_combo[2] else 'Nee'}")
+    print(f"Geschatte engagement: {best_score:.1f}")
 
-    return model
+    return model, df
+
 
 # ==============================
-# ▶️ CEL 8 AANROEPEN
+# ▶️ AANROEP
 # ==============================
 
-if combined.empty or len(combined) < 3:
+if combined.empty or len(combined) < 8:
     print("⚠️ Te weinig data voor AI")
     model = None
-    predictions = pd.DataFrame()
 else:
-    model = train_personal_ai_model(combined)
+    model, combined = train_personal_ai_model(combined)
 
 # ==============================
 # 💾 CEL 10 — DATA OPSLAAN
