@@ -477,6 +477,140 @@ def train_personal_ai_model(df):
     print(f"Media: {'Ja' if best_combo[2] else 'Nee'}")
     print(f"Geschatte engagement: {best_score:.1f}")
 
+        # ==========================================================
+    # 📅 OPTIMAAL PUBLICATIEMOMENT
+    # ==========================================================
+
+    from datetime import timedelta
+
+    print("\n📅 OPTIMAAL PUBLICATIEMOMENT")
+    print("-" * 60)
+
+    best_hour = best_combo[0]
+
+    today = datetime.now()
+    next_post_date = today.replace(hour=best_hour, minute=0, second=0, microsecond=0)
+
+    if next_post_date < today:
+        next_post_date += timedelta(days=1)
+
+    print(f"Aanbevolen publicatie: {next_post_date.strftime('%Y-%m-%d %H:%M')}")
+
+    # ==========================================================
+    # 🧩 IDEALE POST STRUCTUUR
+    # ==========================================================
+
+    print("\n🧩 IDEALE POST STRUCTUUR")
+    print("-" * 60)
+
+    best_hashtags = best_combo[1]
+    best_media = best_combo[2]
+
+    avg_top_words = int(top["woordenaantal"].mean())
+    avg_top_emoji = int(top["emoji_count"].mean())
+
+    print(f"• Woordenaantal: ±{avg_top_words}")
+    print(f"• Hashtags: {best_hashtags}")
+    print(f"• Media: {'Ja' if best_media else 'Nee'}")
+    print(f"• Emoji’s: {avg_top_emoji}")
+
+    # ==========================================================
+    # 🏷️ AANBEVOLEN HASHTAGS
+    # ==========================================================
+
+    print("\n🏷️ AANBEVOLEN HASHTAGS")
+    print("-" * 60)
+
+    if 'results' in globals() or 'results' in locals():
+        best_tags = [r[0] for r in results[:best_hashtags]]
+
+        for tag in best_tags:
+            print(f"#{tag}")
+    else:
+        best_tags = []
+
+    # ==========================================================
+    # 📝 VOORBEELD POST (PATROON-GEBASEERD)
+    # ==========================================================
+
+    print("\n📝 VOORBEELD POST (AI-GEBASEERD)")
+    print("-" * 60)
+
+    top_texts = " ".join(top["text"].astype(str))
+
+    common_words = (
+        pd.Series(top_texts.lower().split())
+        .value_counts()
+        .head(15)
+        .index.tolist()
+    )
+
+    hook_words = [w for w in common_words if len(w) > 4][:3]
+
+    hashtag_string = " ".join(["#" + t for t in best_tags])
+
+    generated_text = (
+        f"{' '.join(hook_words).capitalize()}... {hashtag_string}"
+    )
+
+    print(generated_text)
+
+    # ==========================================================
+    # 🚀 AI CONTENT DIRECTOR — CONCREET ACTIEPLAN
+    # ==========================================================
+
+    print("\n" + "=" * 60)
+    print("🚀 AI CONTENT DIRECTOR — CONCREET ACTIEPLAN")
+    print("=" * 60)
+
+    adviezen = []
+
+    total_posts = len(df)
+
+    hashtag_usage = {}
+
+    for _, row in df.iterrows():
+        tags = extract_hashtags(row["text"])
+        for tag in tags:
+            hashtag_usage[tag] = hashtag_usage.get(tag, 0) + 1
+
+    if best_tags:
+        primary_tag = best_tags[0]
+        count = hashtag_usage.get(primary_tag, 0)
+
+        current_freq = count / total_posts if total_posts > 0 else 0
+        target_freq = min(current_freq * 1.3, 0.8)
+
+        posts_out_of_10 = round(target_freq * 10)
+
+        adviezen.append(
+            f"Gebruik #{primary_tag} in {posts_out_of_10} van je volgende 10 posts ({int(target_freq*100)}%)."
+        )
+
+    adviezen.append(
+        f"Gebruik exact {best_hashtags} hashtags per post."
+    )
+
+    adviezen.append(
+        f"Schrijf captions van ±{avg_top_words} woorden."
+    )
+
+    if avg_top_emoji > 0:
+        adviezen.append(
+            f"Gebruik {avg_top_emoji} emoji per post."
+        )
+
+    adviezen.append(
+        f"Post de komende 7 dagen rond {best_hour}:00."
+    )
+
+    print("\n🔥 WAT JE NU MOET DOEN:")
+    print("-" * 60)
+
+    for i, a in enumerate(adviezen, 1):
+        print(f"{i}. {a}")
+
+
     return model, df
 
 
