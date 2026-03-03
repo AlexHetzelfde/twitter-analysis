@@ -433,18 +433,14 @@ def train_personal_ai_model(df):
     # Feature importance
     # ==========================
     importances = model.feature_importances_
-    importance_df = (
-        pd.DataFrame({
-            "feature": feature_cols,
-            "importance": importances
-        })
-        .sort_values("importance", ascending=False)
-    )
 
-    print("\n📊 FEATURE IMPORTANCE")
-    print("-" * 60)
-    for _, row in importance_df.head(10).iterrows():
-        print(f"{row['feature']}: {row['importance']:.3f}")
+importance_df = (
+    pd.DataFrame({
+        "feature": X.columns,
+        "importance": importances
+    })
+    .sort_values("importance", ascending=False)
+)
 
     # ==========================
     # Grotere simulatie ruimte
