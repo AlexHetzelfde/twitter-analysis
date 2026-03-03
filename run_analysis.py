@@ -434,14 +434,13 @@ def train_personal_ai_model(df):
     # ==========================
     importances = model.feature_importances_
 
-importance_df = (
-    pd.DataFrame({
-        "feature": X.columns,
-        "importance": importances
-    })
-    .sort_values("importance", ascending=False)
-)
-
+        importance_df = (
+        pd.DataFrame({
+            "feature": X.columns,
+            "importance": importances
+        })
+        .sort_values("importance", ascending=False)
+    )
     # ==========================
     # Grotere simulatie ruimte
     # ==========================
@@ -473,7 +472,7 @@ importance_df = (
     print(f"Media: {'Ja' if best_combo[2] else 'Nee'}")
     print(f"Geschatte engagement: {best_score:.1f}")
 
-        # ==========================================================
+    # ==========================================================
     # 📅 OPTIMAAL PUBLICATIEMOMENT
     # ==========================================================
 
