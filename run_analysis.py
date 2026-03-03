@@ -434,7 +434,7 @@ def train_personal_ai_model(df):
     # ==========================
     importances = model.feature_importances_
 
-        importance_df = (
+    importance_df = (
         pd.DataFrame({
             "feature": X.columns,
             "importance": importances
